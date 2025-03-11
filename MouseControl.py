@@ -39,11 +39,12 @@ class WebcamView(ft.UserControl):
         self.img_path, self.selected_webcam_index = "nocam.jpg", None
         self.start_stop_button, self.frame = None, None
         self.img = ft.Image(border_radius=ft.border_radius.all(20))
-    
+        self.theme = 'light'  # Initial theme (light)
+
     def did_mount(self):
         self.set_default_image()
         self.update_webcam()
-    
+
     def set_default_image(self):
         """Sets the default preview image when no webcam is active."""
         if os.path.exists(self.img_path):
@@ -64,7 +65,7 @@ class WebcamView(ft.UserControl):
         length = math.hypot(x2 - x1, y2 - y1)
         vol = np.clip(np.interp(length, [50, 200], [minVol, maxVol]), minVol, maxVol)
         volume.SetMasterVolumeLevel(vol, None)
-            # Drawing UI elements
+        # Drawing UI elements
         cv2.line(self.frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
         cv2.circle(self.frame, ((x1 + x2) // 2, (y1 + y2) // 2), 6, (0, 0, 255), cv2.FILLED)
 
@@ -84,15 +85,15 @@ class WebcamView(ft.UserControl):
         global mode, active
         if not self.cap or not self.is_running:
             return
-        
+
         while self.is_running:
             success, self.frame = self.cap.read()
             if not success:
                 continue
-            
+
             self.frame = detector.findHands(self.frame)
             lmList = detector.findPosition(self.frame, draw=False)
-            
+
             if lmList:
                 fingers = self.get_finger_state(lmList)
                 new_mode = ('Scroll' if fingers in ([0, 1, 0, 0, 0], [0, 1, 1, 0, 0]) else
@@ -108,7 +109,7 @@ class WebcamView(ft.UserControl):
                     self.move_cursor(lmList)
                 if fingers[1:] == [0, 0, 0, 0]:
                     active, mode = False, 'N'
-            
+
             _, im_arr = cv2.imencode('.png', self.frame)
             self.img.src_base64 = base64.b64encode(im_arr).decode("utf-8")
             self.update()
@@ -139,12 +140,34 @@ class WebcamView(ft.UserControl):
         self.selected_webcam_index = int(e.control.value) if e.control.value else None
         self.update()
 
+    def change_theme(self, _):
+        """Toggles between light and dark theme and updates the button text."""
+        if self.theme == "light":
+            self.theme = "dark"
+            self.page.theme_mode = ft.ThemeMode.DARK  # Change to dark theme
+            self.theme_button.text = "Light"  # Change button text to 'Light'
+        else:
+            self.theme = "light"
+            self.page.theme_mode = ft.ThemeMode.LIGHT  # Change to light theme
+            self.theme_button.text = "Dark"  # Change button text to 'Dark'
+        self.page.update()  # Ensure the UI updates after the theme change
+
     def build(self):
         """Builds the UI components."""
         webcam_list = list_webcams()
         dropdown = ft.Dropdown(label="Select Webcam", options=[ft.dropdown.Option(str(i), text=name) for i, name in enumerate(webcam_list)], width=300, on_change=self.dropdown_change)
         self.start_stop_button = ft.ElevatedButton("Start", on_click=self.toggle_webcam)
-        return ft.Column(controls=[self.img, dropdown, self.start_stop_button])
+        self.theme_button = ft.IconButton(ft.icons.BRIGHTNESS_6, on_click=self.change_theme, tooltip="Change Theme", icon_size=24)
+        
+        # Using Row and Column correctly
+        return ft.Column(
+            controls=[
+                ft.Row(controls=[self.theme_button], alignment=ft.MainAxisAlignment.START),
+                self.img,
+                dropdown,
+                self.start_stop_button
+            ]
+        )
 
 def main(page: ft.Page):
     page.padding = 50

@@ -38,7 +38,7 @@ class handDetector():
             myHand = self.results.multi_hand_landmarks[handNo]
             for id, lm in enumerate(myHand.landmark):
              #   print(id, lm)
-                h, w = img.shape
+                h, w, c = img.shape
                 if z_axis == False:
                    cx, cy = int(lm.x * w), int(lm.y * h)
                     # print(id, cx, cy)

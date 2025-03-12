@@ -1,4 +1,4 @@
-import cv2, base64, os, pythoncom, time, math, pyautogui, autopy
+import cv2, base64, os, pythoncom, math, pyautogui, autopy, threading
 import flet as ft
 import numpy as np
 import HandTrackingModule as htm
@@ -6,7 +6,6 @@ from pygrabber.dshow_graph import FilterGraph
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-import threading
 
 # Camera settings
 wCam, hCam = 640, 480
@@ -18,108 +17,131 @@ interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
 volume = cast(interface, POINTER(IAudioEndpointVolume))
 minVol, maxVol = -63, volume.GetVolumeRange()[1]
 
-# Gesture-related variables
 tipIds = [4, 8, 12, 16, 20]
-mode, active = '', False
-smooth_factor, prev_x, prev_y = 0.2, 0, 0
-
 pyautogui.FAILSAFE = False
 
 def list_webcams():
-    """Lists available webcams."""
     pythoncom.CoInitialize()
     devices = FilterGraph().get_input_devices()
     pythoncom.CoUninitialize()
     return devices
 
-class WebcamView(ft.UserControl):
+class Setup(ft.UserControl):
     def __init__(self):
         super().__init__()
-        self.is_running, self.cap, self.thread = False, None, None
-        self.img_path, self.selected_webcam_index = "nocam.jpg", None
-        self.start_stop_button, self.frame = None, None
+        self.is_running = False
+        self.cap = None
+        self.thread = None
+        self.img_path = "nocam.jpg"
+        self.selected_webcam_index = None
+        self.start_stop_button = None
         self.img = ft.Image(border_radius=ft.border_radius.all(20))
-        self.theme = 'light'  # Initial theme (light)
+        self.mode = 'N'
+        self.active = False
+        self.prev_x, self.prev_y = 0, 0
+        self.smooth_factor = 0.2
+        self.theme_toggle_button = None
+        self.right_click_active = False
+        self.left_click_active = False  # Button for changing theme
 
     def did_mount(self):
         self.set_default_image()
         self.update_webcam()
 
     def set_default_image(self):
-        """Sets the default preview image when no webcam is active."""
         if os.path.exists(self.img_path):
             with open(self.img_path, "rb") as image_file:
                 self.img.src_base64 = base64.b64encode(image_file.read()).decode("utf-8")
         self.update()
 
     def get_finger_state(self, lmList):
-        """Returns a list indicating which fingers are up."""
         return [
-            1 if lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1] else 0,
-            *[1 if lmList[tipIds[i]][2] < lmList[tipIds[i] - 2][2] else 0 for i in range(1, 5)]
+            lmList[tipIds[0]][1] > lmList[tipIds[0] - 1][1],
+            *[lmList[tipIds[i]][2] < lmList[tipIds[i] - 2][2] for i in range(1, 5)]
         ]
 
     def adjust_volume(self, lmList):
-        """Adjusts system volume based on pinch distance."""
         x1, y1, x2, y2 = *lmList[4][1:], *lmList[8][1:]
         length = math.hypot(x2 - x1, y2 - y1)
         vol = np.clip(np.interp(length, [50, 200], [minVol, maxVol]), minVol, maxVol)
         volume.SetMasterVolumeLevel(vol, None)
-        # Drawing UI elements
         cv2.line(self.frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
-        cv2.circle(self.frame, ((x1 + x2) // 2, (y1 + y2) // 2), 6, (0, 0, 255), cv2.FILLED)
+        cv2.circle(self.frame, ((x1 + x2) // 2, (y1 + y2) // 2), 5, (0, 0, 255), cv2.FILLED)
+        cv2.circle(self.frame, lmList[8][1:], 5, (0, 255, 0), cv2.FILLED)
+        cv2.circle(self.frame, lmList[4][1:], 5, (0, 255, 0), cv2.FILLED)
 
     def move_cursor(self, lmList):
-        """Moves cursor smoothly based on index finger position."""
-        global prev_x, prev_y
-        x1, y1 = lmList[8][1:]
+        x1, y1 = lmList[12][1:]  # Index finger tip
         w, h = autopy.screen.size()
-        target_x, target_y = int(np.interp(x1, [110, 620], [w - 1, 0])), int(np.interp(y1, [20, 350], [0, h - 1]))
-        prev_x, prev_y = int(prev_x * (1 - smooth_factor) + target_x * smooth_factor), int(prev_y * (1 - smooth_factor) + target_y * smooth_factor)
-        autopy.mouse.move(prev_x, prev_y)
+    
+        # Map hand position to screen resolution
+        target_x = int(np.interp(x1, [110, 620], [w - 1, 0]))
+        target_y = int(np.interp(y1, [20, 350], [0, h - 1]))
+    
+        # Apply smoothing
+        self.prev_x = int(self.prev_x * (1 - self.smooth_factor) + target_x * self.smooth_factor)
+        self.prev_y = int(self.prev_y * (1 - self.smooth_factor) + target_y * self.smooth_factor)
+        autopy.mouse.move(self.prev_x, self.prev_y)
+        cv2.circle(self.frame, (x1, y1), 5, (255, 255, 255), cv2.FILLED)
+    
+        # Left click (thumb and index finger close together)
         if lmList[4][1] < lmList[8][1]:
-            pyautogui.click()
+            cv2.circle(self.frame, lmList[4][1:], 5, (0, 255, 0), cv2.FILLED)
+            if not self.left_click_active:  # Prevent multiple clicks in quick succession
+                pyautogui.mouseDown(button='left')
+                self.left_click_active = True
+        elif self.left_click_active:
+            pyautogui.mouseUp(button='left')
+            self.left_click_active = False
+    
+        # Right click (index finger further than middle finger)
+        if lmList[8][2] > lmList[6][2]:
+            cv2.circle(self.frame, lmList[8][1:], 5, (0, 255, 0), cv2.FILLED)
+            if not self.right_click_active:  # Prevent multiple clicks in quick succession
+                pyautogui.mouseDown(button='right')
+                self.right_click_active = True
+        elif self.right_click_active:
+            pyautogui.mouseUp(button='right')
+            self.right_click_active = False
+
 
     def update_webcam(self):
-        """Handles webcam streaming in a separate thread."""
-        global mode, active
         if not self.cap or not self.is_running:
             return
-
         while self.is_running:
             success, self.frame = self.cap.read()
             if not success:
                 continue
-
             self.frame = detector.findHands(self.frame)
             lmList = detector.findPosition(self.frame, draw=False)
-
             if lmList:
                 fingers = self.get_finger_state(lmList)
                 new_mode = ('Scroll' if fingers in ([0, 1, 0, 0, 0], [0, 1, 1, 0, 0]) else
                             'Volume' if fingers == [1, 1, 0, 0, 0] else
                             'Cursor' if fingers == [1, 1, 1, 1, 1] else 'N')
                 if new_mode != 'N':
-                    mode, active = new_mode, True
-                if mode == 'Scroll':
-                    pyautogui.scroll(300 if fingers == [0, 1, 0, 0, 0] else -300 if fingers == [0, 1, 1, 0, 0] else 0)
-                elif mode == 'Volume':
+                    self.mode, self.active = new_mode, True
+                if self.mode == 'Scroll':
+                    cv2.circle(self.frame, lmList[8][1:], 5, (0, 255, 0), cv2.FILLED)
+                    if fingers == [0, 1, 0, 0, 0]:
+                        pyautogui.scroll(200)
+                    else:
+                        pyautogui.scroll(-200)
+                        cv2.circle(self.frame, lmList[12][1:], 5, (0, 255, 0), cv2.FILLED)
+
+                elif self.mode == 'Volume':
                     self.adjust_volume(lmList)
-                elif mode == 'Cursor':
+                elif self.mode == 'Cursor':
                     self.move_cursor(lmList)
                 if fingers[1:] == [0, 0, 0, 0]:
-                    active, mode = False, 'N'
-
+                    self.active, self.mode = False, 'N'
             _, im_arr = cv2.imencode('.png', self.frame)
             self.img.src_base64 = base64.b64encode(im_arr).decode("utf-8")
             self.update()
-            time.sleep(0.03)
 
     def toggle_webcam(self, _):
-        """Toggles webcam state."""
         if self.is_running:
-            global mode, active
-            self.is_running, mode, active = False, '', False
+            self.is_running = False
             if self.cap:
                 self.cap.release()
             self.cap, self.thread = None, None
@@ -128,50 +150,39 @@ class WebcamView(ft.UserControl):
         else:
             if self.selected_webcam_index is None:
                 return
-            self.is_running, self.start_stop_button.text = True, "Stop"
+            self.is_running = True
+            self.start_stop_button.text = "Stop"
             self.cap = cv2.VideoCapture(self.selected_webcam_index)
             self.cap.set(3, wCam), self.cap.set(4, hCam)
             self.thread = threading.Thread(target=self.update_webcam)
             self.thread.start()
         self.update()
 
-    def dropdown_change(self, e):
-        """Updates the selected webcam index."""
-        self.selected_webcam_index = int(e.control.value) if e.control.value else None
+    def toggle_theme(self, _):
+        if self.page.theme_mode == ft.ThemeMode.LIGHT:
+            self.page.theme_mode = ft.ThemeMode.DARK
+            self.theme_toggle_button.icon = ft.Icons.LIGHT_MODE
+        else:
+            self.page.theme_mode = ft.ThemeMode.LIGHT
+            self.theme_toggle_button.icon = ft.Icons.DARK_MODE
+        self.page.update()
         self.update()
 
-    def change_theme(self, _):
-        """Toggles between light and dark theme and updates the button text."""
-        if self.theme == "light":
-            self.theme = "dark"
-            self.page.theme_mode = ft.ThemeMode.DARK  # Change to dark theme
-            self.theme_button.text = "Light"  # Change button text to 'Light'
-        else:
-            self.theme = "light"
-            self.page.theme_mode = ft.ThemeMode.LIGHT  # Change to light theme
-            self.theme_button.text = "Dark"  # Change button text to 'Dark'
-        self.page.update()  # Ensure the UI updates after the theme change
-
     def build(self):
-        """Builds the UI components."""
         webcam_list = list_webcams()
-        dropdown = ft.Dropdown(label="Select Webcam", options=[ft.dropdown.Option(str(i), text=name) for i, name in enumerate(webcam_list)], width=300, on_change=self.dropdown_change)
+        dropdown = ft.Dropdown(label="Select Webcam", options=[ft.dropdown.Option(str(i), text=name) for i, name in enumerate(webcam_list)], width=300, on_change=lambda e: setattr(self, 'selected_webcam_index', int(e.control.value)))
         self.start_stop_button = ft.ElevatedButton("Start", on_click=self.toggle_webcam)
-        self.theme_button = ft.IconButton(ft.icons.BRIGHTNESS_6, on_click=self.change_theme, tooltip="Change Theme", icon_size=24)
-        
-        # Using Row and Column correctly
-        return ft.Column(
-            controls=[
-                ft.Row(controls=[self.theme_button], alignment=ft.MainAxisAlignment.START),
-                self.img,
-                dropdown,
-                self.start_stop_button
-            ]
-        )
+
+        # Add a theme toggle button (with icon)
+        self.theme_toggle_button = ft.IconButton(ft.Icons.DARK_MODE if self.page.theme_mode == ft.ThemeMode.LIGHT else ft.Icons.LIGHT_MODE, on_click=self.toggle_theme, tooltip="Toggle Theme")
+        return ft.Column([self.theme_toggle_button, self.img, dropdown, self.start_stop_button])
 
 def main(page: ft.Page):
+    page.window.width = 1200
+    page.window.height = 800
+    page.window.resizable = False
     page.padding = 50
-    page.add(WebcamView())
+    page.add(Setup())
 
 if __name__ == '__main__':
     ft.app(target=main)

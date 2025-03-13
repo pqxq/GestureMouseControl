@@ -43,6 +43,9 @@ class Setup(ft.UserControl):
         self.theme_toggle_button = None
         self.right_click_active = False
         self.left_click_active = False  # Button for changing theme
+        self.mode_text = ft.Text(value=f"Mode: {self.mode}", font_family="RobotoSlab", theme_style=ft.TextThemeStyle.HEADLINE_SMALL, weight=ft.FontWeight.NORMAL)
+
+
 
     def did_mount(self):
         self.set_default_image()
@@ -138,6 +141,7 @@ class Setup(ft.UserControl):
             _, im_arr = cv2.imencode('.png', self.frame)
             self.img.src_base64 = base64.b64encode(im_arr).decode("utf-8")
             self.update()
+            self.mode_text.value = f"Mode: {self.mode}"
 
     def toggle_webcam(self, _):
         if self.is_running:
@@ -175,13 +179,21 @@ class Setup(ft.UserControl):
 
         # Add a theme toggle button (with icon)
         self.theme_toggle_button = ft.IconButton(ft.Icons.DARK_MODE if self.page.theme_mode == ft.ThemeMode.LIGHT else ft.Icons.LIGHT_MODE, on_click=self.toggle_theme, tooltip="Toggle Theme")
-        return ft.Column([self.theme_toggle_button, self.img, dropdown, self.start_stop_button])
+        return ft.Column([self.theme_toggle_button, self.img, ft.Row([dropdown, self.mode_text], alignment=ft.MainAxisAlignment.START, spacing=100), self.start_stop_button])
 
 def main(page: ft.Page):
+    page.fonts = {
+        "RobotoSlab": "https://github.com/google/fonts/raw/main/apache/robotoslab/RobotoSlab%5Bwght%5D.ttf"
+    }
     page.window.width = 1200
     page.window.height = 800
     page.window.resizable = False
     page.padding = 50
+    if page.platform_brightness == ft.Brightness.LIGHT:
+        page.theme_mode = ft.ThemeMode.LIGHT
+    else:
+        page.theme_mode = ft.ThemeMode.DARK
+
     page.add(Setup())
 
 if __name__ == '__main__':

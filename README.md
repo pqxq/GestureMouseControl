@@ -1,12 +1,52 @@
 ![alt text](https://github.com/pqxq/GestureMouseControl/blob/main/Preview.PNG)
 
-# Requires:
+# !!! Python 3.8.0
 
-- **Python 3.8.0**
-- **Mediapipe 0.10.11**
-- **Opencv-python 4.11.0.86**
-- **Autopy 4.0.0**
-- **Pygrabber 0.1**
-- **Pywin32 308**
-- **PyAutoGUI 0.9.54**
-- **Pycaw 20240210**
+### Full Dependency List:
+
+**Standard Libraries** :
+
+- `base64`
+- `os`
+- `math`
+- `threading`
+- `logging`
+- `ctypes`
+
+**Third-party Packages** :
+
+- `opencv-python` (cv2)
+- `pythoncom` (from pywin32)
+- `pyautogui`
+- `autopy`
+- `flet`
+- `numpy`
+- `pygrabber`
+- `comtypes`
+- `pycaw`
+- `mediapipe`
+
+**Windows-specific Dependencies** :
+
+- `pywin32` (for pythoncom)
+- `comtypes` (for Windows COM integration)
+
+**Indirect Dependencies** :
+
+- `protobuf` (required by mediapipe)
+- `pillow` (required by pyautogui)
+- `screeninfo` (required by flet)
+
+## Steps to Compile
+
+1. First, make sure you have PyInstaller installed:
+
+   ```bash
+   pip install pyinstaller
+   ```
+2. Navigate to your project folder and run the following command to compile the application:
+
+   ```bash
+   pyinstaller --onefile --icon=img/icon.ico --name=GestureControl --windowed --additional-hooks-dir=hooks --add-data "img;img" Main.py
+   ```
+3. After running the command, the executable will be created in the `dist` folder with the name `GestureControl.exe`.

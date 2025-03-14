@@ -1,4 +1,4 @@
-![alt text](https://github.com/pqxq/GestureMouseControl/Preview.PNG?raw=true)
+![alt text](https://github.com/pqxq/GestureMouseControl/blob/main/Preview.PNG)
 
 # Requires:
 

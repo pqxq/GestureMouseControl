@@ -2,8 +2,6 @@
 
 This project is available for download via the [latest release](https://github.com/pqxq/GestureMouseControl/releases/latest).
 
-
-
 ![alt text](https://github.com/pqxq/GestureMouseControl/blob/main/Preview.PNG)
 
 # Used Python 3.8.0
@@ -47,14 +45,14 @@ This project is available for download via the [latest release](https://github.c
 
 ## Steps to Compile
 
-1. First, make sure you have PyInstaller installed:
+1. First, make sure you have Flet installed:
 
    ```bash
-   pip install pyinstaller
+   pip install flet
    ```
 2. Navigate to your project folder and run the following command to compile the application:
 
    ```bash
-   pyinstaller --onefile --icon=img/icon.ico --name=GestureControl --windowed --additional-hooks-dir=hooks --add-data "img;img" Main.py
+   flet pack Main.py --name GestureControl --icon img/icon.ico --add-data "img;img" --add-data "mediapipe;mediapipe"
    ```
 3. After running the command, the executable will be created in the `dist` folder with the name `GestureControl.exe`.

@@ -1,4 +1,4 @@
-![1741932464093](image/README/1741932464093.png)
+![alt text](https://github.com/pqxq/GestureMouseControl/Preview.PNG?raw=true)
 
 # Requires:
 

@@ -1,0 +1,12 @@
+![1741932464093](image/README/1741932464093.png)
+
+# Requires:
+
+- **Python 3.8.0**
+- **Mediapipe 0.10.11**
+- **Opencv-python 4.11.0.86**
+- **Autopy 4.0.0**
+- **Pygrabber 0.1**
+- **Pywin32 308**
+- **PyAutoGUI 0.9.54**
+- **Pycaw 20240210**

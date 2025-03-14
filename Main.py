@@ -14,6 +14,16 @@ from pygrabber.dshow_graph import FilterGraph
 from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+import sys
+
+os.environ['PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION'] = 'python'
+
+def resource_path(relative_path):
+    if getattr(sys, 'frozen', False):
+        base_path = sys._MEIPASS
+    else:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -50,7 +60,7 @@ class Setup(ft.UserControl):
         self.is_running: bool = False
         self.cap = None
         self.thread: threading.Thread = None
-        self.img_path: str = 'img/nocam.jpg'
+        self.img_path = resource_path('img/nocam.jpg')
         self.selected_webcam_index: int = None
         self.prev_x: int = 0
         self.prev_y: int = 0
@@ -292,13 +302,13 @@ class Setup(ft.UserControl):
         ])
         gestures_section = ft.Column([
             ft.Container(ft.Text(value='   Gestures', theme_style=ft.TextThemeStyle.DISPLAY_MEDIUM), padding=ft.padding.only(bottom=25)),
-            ft.Row([ft.Image(src='img/None.png', width=65, height=65), ft.Text('   None-position', size=20)]),
-            ft.Row([ft.Image(src='img/Cursor.png', width=65, height=65), ft.Text('   Cursor Control', size=20)]),
-            ft.Row([ft.Image(src='img/LMB.png', width=65, height=65), ft.Text('   Left Click', size=20)]),
-            ft.Row([ft.Image(src='img/RMB.png', width=65, height=65), ft.Text('   Right Click', size=20)]),
-            ft.Row([ft.Image(src='img/UScroll.png', width=65, height=65), ft.Text('   Scroll UP', size=20)]),
-            ft.Row([ft.Image(src='img/DScroll.png', width=65, height=65), ft.Text('   Scroll DOWN', size=20)]),
-            ft.Row([ft.Image(src='img/Volume.png', width=65, height=65), ft.Text('   Volume Control', size=20)]),
+            ft.Row([ft.Image(src=resource_path('img/None.png'), width=65, height=65), ft.Text('   None-position', size=20)]),
+            ft.Row([ft.Image(src=resource_path('img/Cursor.png'), width=65, height=65), ft.Text('   Cursor Control', size=20)]),
+            ft.Row([ft.Image(src=resource_path('img/LMB.png'), width=65, height=65), ft.Text('   Left Click', size=20)]),
+            ft.Row([ft.Image(src=resource_path('img/RMB.png'), width=65, height=65), ft.Text('   Right Click', size=20)]),
+            ft.Row([ft.Image(src=resource_path('img/UScroll.png'), width=65, height=65), ft.Text('   Scroll UP', size=20)]),
+            ft.Row([ft.Image(src=resource_path('img/DScroll.png'), width=65, height=65), ft.Text('   Scroll DOWN', size=20)]),
+            ft.Row([ft.Image(src=resource_path('img/Volume.png'), width=65, height=65), ft.Text('   Volume Control', size=20)]),
         ], alignment=ft.alignment.top_left, horizontal_alignment=ft.CrossAxisAlignment.START)
         gestures_section = ft.Container(content=gestures_section)
         return ft.Row([main_content, gestures_section], alignment=ft.alignment.center, spacing=100)

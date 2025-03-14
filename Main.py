@@ -69,6 +69,7 @@ class Setup(ft.UserControl):
         )
         self.active = False
 
+
     def did_mount(self):
         self.set_default_image()
 

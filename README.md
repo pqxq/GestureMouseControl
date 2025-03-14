@@ -2,7 +2,7 @@
 
 This project is available for download via the [latest release](https://github.com/pqxq/GestureMouseControl/releases/latest).
 
-![alt text](https://github.com/pqxq/GestureMouseControl/blob/main/PREVIEW.png)
+![alt text](https://github.com/pqxq/GestureMouseControl/blob/main/PREVIEW.PNG)
 
 # Used Python 3.8.0
 

@@ -18,6 +18,8 @@ This project is available for download via the [latest release](https://github.c
 - `threading`
 - `logging`
 - `ctypes`
+- `sys`
+- `typing (List, Optional, Tuple)`
 
 **Third-party Packages** :
 

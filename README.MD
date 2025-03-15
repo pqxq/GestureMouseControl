@@ -53,6 +53,6 @@ This project is available for download via the [latest release](https://github.c
 2. Navigate to your project folder and run the following command to compile the application:
 
    ```bash
-   flet pack Main.py --name GestureControl --icon img/icon.ico --add-data "img;img" --add-data "mediapipe;mediapipe"
+   flet pack src/Main.py --name GestureControl --icon img/icon.ico --add-data "img;img" --add-data "mediapipe;mediapipe"
    ```
 3. After running the command, the executable will be created in the `dist` folder with the name `GestureControl.exe`.

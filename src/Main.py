@@ -59,7 +59,7 @@ class Setup(ft.UserControl):
         self.is_running: bool = False
         self.cap: Optional[cv2.VideoCapture] = None
         self.thread: Optional[threading.Thread] = None
-        self.img_path: str = resource_path('../img/nocam.jpg')
+        self.img_path: str = resource_path('img/nocam.jpg')
         self.selected_webcam_index: Optional[int] = None
         self.prev_x: int = 0
         self.prev_y: int = 0
@@ -311,19 +311,19 @@ class Setup(ft.UserControl):
         gestures_section = ft.Column([
             ft.Container(ft.Text(value='   Gestures', theme_style=ft.TextThemeStyle.DISPLAY_MEDIUM),
                          padding=ft.padding.only(bottom=25)),
-            ft.Row([ft.Image(src=resource_path('../img/None.png'), width=65, height=65),
+            ft.Row([ft.Image(src=resource_path('img/None.png'), width=65, height=65),
                     ft.Text('   None-position', size=20)]),
-            ft.Row([ft.Image(src=resource_path('../img/Cursor.png'), width=65, height=65),
+            ft.Row([ft.Image(src=resource_path('img/Cursor.png'), width=65, height=65),
                     ft.Text('   Cursor Control', size=20)]),
-            ft.Row([ft.Image(src=resource_path('../img/LMB.png'), width=65, height=65),
+            ft.Row([ft.Image(src=resource_path('img/LMB.png'), width=65, height=65),
                     ft.Text('   Left Click', size=20)]),
-            ft.Row([ft.Image(src=resource_path('../img/RMB.png'), width=65, height=65),
+            ft.Row([ft.Image(src=resource_path('img/RMB.png'), width=65, height=65),
                     ft.Text('   Right Click', size=20)]),
-            ft.Row([ft.Image(src=resource_path('../img/UScroll.png'), width=65, height=65),
+            ft.Row([ft.Image(src=resource_path('img/UScroll.png'), width=65, height=65),
                     ft.Text('   Scroll UP', size=20)]),
-            ft.Row([ft.Image(src=resource_path('../img/DScroll.png'), width=65, height=65),
+            ft.Row([ft.Image(src=resource_path('img/DScroll.png'), width=65, height=65),
                     ft.Text('   Scroll DOWN', size=20)]),
-            ft.Row([ft.Image(src=resource_path('../img/Volume.png'), width=65, height=65),
+            ft.Row([ft.Image(src=resource_path('img/Volume.png'), width=65, height=65),
                     ft.Text('   Volume Control', size=20)]),
         ], alignment=ft.alignment.top_left, horizontal_alignment=ft.CrossAxisAlignment.START)
         gestures_section = ft.Container(content=gestures_section)

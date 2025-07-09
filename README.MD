@@ -15,7 +15,6 @@ This project is available for download via the [latest release](https://github.c
 - `math`
 - `threading`
 - `logging`
-- `ctypes`
 - `sys`
 - `typing (List, Optional, Tuple)`
 

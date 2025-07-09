@@ -12,7 +12,6 @@ import flet as ft
 import numpy as np
 import HandTrackingModule as Htm
 from pygrabber.dshow_graph import FilterGraph
-from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 from typing import List, Optional, Tuple
@@ -31,8 +30,11 @@ SMOOTHING_FACTOR = 0.2
 detector = Htm.handDetector(maxHands=1, detectionCon=0.85, trackCon=0.8)
 devices = AudioUtilities.GetSpeakers()
 interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
-volume = cast(interface, POINTER(IAudioEndpointVolume))
-MIN_VOL, MAX_VOL = -63, volume.GetVolumeRange()[1]
+volume = interface.QueryInterface(IAudioEndpointVolume)
+volume.GetMasterVolumeLevel()
+volRange = volume.GetVolumeRange()
+volume.SetMasterVolumeLevel(0, None)
+MIN_VOL, MAX_VOL = volRange[0], volRange[1]
 TIP_IDS = [4, 8, 12, 16, 20]
 
 pyautogui.FAILSAFE = False
@@ -97,9 +99,9 @@ class Setup(ft.UserControl):
                 self.img.src_base64 = base64.b64encode(image_file.read()).decode('utf-8')
         self.update()
 
-    def draw_marker(self, pos: Tuple[int, int], color: Tuple[int, int, int],
-                    radius: int = 5, thickness: int = cv2.FILLED) -> None:
-        cv2.circle(self.frame, pos, radius, color, thickness)
+    def draw_marker(self, pos: Tuple[int, int], color: Tuple[int, int, int], radius: int = 5, thickness: int = cv2.FILLED) -> None:
+        if self.frame is not None and isinstance(self.frame, np.ndarray):
+            cv2.circle(self.frame, pos, radius, color, thickness)
 
     def adjust_volume(self, lm_list: List[List[int]]) -> None:
         x1, y1 = lm_list[4][1], lm_list[4][2]
@@ -109,7 +111,8 @@ class Setup(ft.UserControl):
         vol = np.clip(vol, MIN_VOL, MAX_VOL)
         volume.SetMasterVolumeLevel(vol, None)
 
-        cv2.line(self.frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
+        if isinstance(self.frame, np.ndarray):
+            cv2.line(self.frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
         center = ((x1 + x2) // 2, (y1 + y2) // 2)
         self.draw_marker(center, (0, 0, 255))
         self.draw_marker((x1, y1), (0, 255, 0))
@@ -185,6 +188,8 @@ class Setup(ft.UserControl):
     def update_webcam(self) -> None:
         try:
             while self.is_running:
+                if self.cap is None:
+                    continue
                 success, self.frame = self.cap.read()
                 if not success:
                     continue
@@ -223,10 +228,12 @@ class Setup(ft.UserControl):
     def start_camera(self) -> None:
         self.mode.value = 'Starting'
         self.is_running = True
-        self.start_stop_button.text = 'Stop'
-        self.start_stop_button.icon = ft.Icons.STOP_ROUNDED
+        if self.start_stop_button is not None:
+            self.start_stop_button.text = 'Stop'
+            self.start_stop_button.icon = ft.Icons.STOP_ROUNDED
         self.update()
-        self.cap = cv2.VideoCapture(self.selected_webcam_index)
+        cam_index = self.selected_webcam_index if self.selected_webcam_index is not None else 0
+        self.cap = cv2.VideoCapture(cam_index)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
         self.thread = threading.Thread(target=self.update_webcam, daemon=True)
@@ -240,8 +247,9 @@ class Setup(ft.UserControl):
         if self.thread and self.thread.is_alive():
             self.thread.join(timeout=1)
         self.cap, self.thread = None, None
-        self.start_stop_button.text = 'Start'
-        self.start_stop_button.icon = ft.Icons.PLAY_ARROW_ROUNDED
+        if self.start_stop_button is not None:
+            self.start_stop_button.text = 'Start'
+            self.start_stop_button.icon = ft.Icons.PLAY_ARROW_ROUNDED
         self.set_default_image()
 
     def toggle_webcam(self, _e) -> None:
@@ -254,16 +262,21 @@ class Setup(ft.UserControl):
             self.start_camera()
 
     def toggle_theme(self, _e) -> None:
+        if not hasattr(self, "page") or self.page is None:
+            logging.warning("Page is not set. Cannot toggle theme.")
+            return
         if self.page.theme_mode == ft.ThemeMode.LIGHT:
             self.page.theme_mode = ft.ThemeMode.DARK
-            self.theme_toggle_button.icon = ft.Icons.LIGHT_MODE_ROUNDED
+            if self.theme_toggle_button is not None:
+                self.theme_toggle_button.icon = ft.Icons.LIGHT_MODE_ROUNDED
         else:
             self.page.theme_mode = ft.ThemeMode.LIGHT
-            self.theme_toggle_button.icon = ft.Icons.DARK_MODE_ROUNDED
+            if self.theme_toggle_button is not None:
+                self.theme_toggle_button.icon = ft.Icons.DARK_MODE_ROUNDED
         self.page.update()
         self.update()
 
-    def build(self) -> ft.Row:
+    def build(self) -> None:
         webcam_list = list_webcams()
         dropdown = ft.Dropdown(
             label='Select Webcam',
@@ -283,8 +296,14 @@ class Setup(ft.UserControl):
                 text_style=ft.TextStyle(size=18, weight=ft.FontWeight.BOLD)
             )
         )
+        theme_icon = ft.Icons.DARK_MODE_ROUNDED
+        if hasattr(self, "page") and self.page is not None:
+            if self.page.theme_mode == ft.ThemeMode.LIGHT:
+                theme_icon = ft.Icons.DARK_MODE_ROUNDED
+            else:
+                theme_icon = ft.Icons.LIGHT_MODE_ROUNDED
         self.theme_toggle_button = ft.IconButton(
-            ft.Icons.DARK_MODE_ROUNDED if self.page.theme_mode == ft.ThemeMode.LIGHT else ft.Icons.LIGHT_MODE_ROUNDED,
+            theme_icon,
             on_click=self.toggle_theme,
             tooltip='Toggle Theme',
             style=ft.ButtonStyle(alignment=ft.alignment.center_left, icon_size=30)
@@ -323,7 +342,9 @@ class Setup(ft.UserControl):
                     ft.Text('   Volume Control', size=20)]),
         ])
 
-        return ft.Row([main_content, gestures_section], spacing=100, alignment=ft.MainAxisAlignment.SPACE_EVENLY)
+        self.controls.append(
+            ft.Row([main_content, gestures_section], spacing=100, alignment=ft.MainAxisAlignment.SPACE_EVENLY)
+        )
 
 def main(page: ft.Page) -> None:
     page.title = 'Gesture Control'
